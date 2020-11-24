@@ -1,9 +1,11 @@
 from typing import Optional
 
 import torch
+
 import kornia
 from kornia.geometry.conversions import convert_points_to_homogeneous
 from kornia.geometry.conversions import convert_points_from_homogeneous
+from kornia.testing import check_is_tensor
 
 
 __all__ = [
@@ -195,27 +197,37 @@ def transform_points(trans_01: torch.Tensor,
         >>> trans_01 = torch.eye(4).view(1, 4, 4)  # Bx4x4
         >>> points_0 = kornia.transform_points(trans_01, points_1)  # BxNx3
     """
-    if not torch.is_tensor(trans_01) or not torch.is_tensor(points_1):
-        raise TypeError("Input type is not a torch.Tensor")
+    check_is_tensor(trans_01)
+    check_is_tensor(points_1)
     if not trans_01.device == points_1.device:
         raise TypeError("Tensor must be in the same device")
     if not trans_01.shape[0] == points_1.shape[0] and trans_01.shape[0] != 1:
         raise ValueError("Input batch size must be the same for both tensors or 1")
     if not trans_01.shape[-1] == (points_1.shape[-1] + 1):
-        raise ValueError("Last input dimensions must differe by one unit")
+        raise ValueError("Last input dimensions must differ by one unit")
+
+    # We reshape to BxNxD in case we get more dimensions, e.g., MxBxNxD
+    shape_inp = list(points_1.shape)
+    points_1 = points_1.reshape(-1, points_1.shape[-2], points_1.shape[-1])
+    trans_01 = trans_01.reshape(-1, trans_01.shape[-2], trans_01.shape[-1])
+    # We expand trans_01 to match the dimensions needed for bmm
+    trans_01 = torch.repeat_interleave(trans_01, repeats=points_1.shape[0] // trans_01.shape[0], dim=0)
     # to homogeneous
     points_1_h = convert_points_to_homogeneous(points_1)  # BxNxD+1
     # transform coordinates
-    points_0_h = torch.matmul(
-        trans_01.unsqueeze(1), points_1_h.unsqueeze(-1))
+    points_0_h = torch.bmm(points_1_h,
+                           trans_01.permute(0, 2, 1))
     points_0_h = torch.squeeze(points_0_h, dim=-1)
     # to euclidean
     points_0 = convert_points_from_homogeneous(points_0_h)  # BxNxD
+    # reshape to the input shape
+    shape_inp[-2] = points_0.shape[-2]
+    shape_inp[-1] = points_0.shape[-1]
+    points_0 = points_0.reshape(shape_inp)
     return points_0
 
 
 def transform_boxes(trans_mat: torch.Tensor, boxes: torch.Tensor, mode: str = "xyxy") -> torch.Tensor:
-
     r""" Function that applies a transformation matrix to a box or batch of boxes. Boxes must
     be a tensor of the shape (N, 4) or a batch of boxes (B, N, 4) and trans_mat must be a (3, 3)
     transformation matrix or a batch of transformation matrices (B, 3, 3)

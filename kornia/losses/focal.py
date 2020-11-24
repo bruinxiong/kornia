@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from kornia.utils import one_hot
+from kornia.utils.one_hot import one_hot
 
 
 # based on:
@@ -41,7 +41,7 @@ def focal_loss(
 
     if not input.device == target.device:
         raise ValueError(
-            "input and target must be in the same device. Got: {}" .format(
+            "input and target must be in the same device. Got: {} and {}" .format(
                 input.device, target.device))
 
     # compute softmax over the classes axis

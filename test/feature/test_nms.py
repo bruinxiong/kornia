@@ -2,7 +2,6 @@ import pytest
 
 import kornia as kornia
 import kornia.testing as utils  # test utils
-from test.common import device
 
 import torch
 from torch.testing import assert_allclose
@@ -24,15 +23,15 @@ class TestNMS2d:
         inp = torch.tensor([[[
             [0., 0., 0., 0., 0., 0., 0.],
             [0., 0.1, 1., 0., 1., 1., 0.],
-            [0., 0.7, 1.1, 0., 1., 1., 0.],
+            [0., 0.7, 1.1, 0., 1., 2., 0.],
             [0., 0.8, 1., 0., 1., 1., 0.],
         ]]], device=device).float()
 
         expected = torch.tensor([[[
             [0., 0., 0., 0., 0., 0., 0.],
-            [0., 0, 0, 0., 1, 1., 0.],
-            [0., 0, 1.1, 0., 1., 1., 0.],
-            [0., 0, 0, 0., 1., 1., 0.],
+            [0., 0, 0, 0., 0, 0., 0.],
+            [0., 0, 1.1, 0., 0., 2., 0.],
+            [0., 0, 0, 0., 0., 0., 0.],
         ]]], device=device).float()
         nms = kornia.feature.NonMaximaSuppression2d((3, 3)).to(device)
         scores = nms(inp)
@@ -78,20 +77,20 @@ class TestNMS3d:
         ]]]).to(device)
 
         expected = torch.tensor([[[[[0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.]],
-                                  [[0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 2., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.]],
-                                  [[0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.],
-                                   [0., 0., 0., 0., 0.]]]]])
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.]],
+                                   [[0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 2., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.]],
+                                   [[0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.],
+                                    [0., 0., 0., 0., 0.]]]]]).to(device)
         nms = kornia.feature.NonMaximaSuppression3d((3, 3, 3)).to(device)
         scores = nms(inp)
         assert_allclose(scores, expected, atol=1e-4, rtol=1e-3)

@@ -4,24 +4,34 @@ import sys
 if sys.version_info < (3, 6, 0):
     raise RuntimeError("Kornia requires Python 3.6.0 or later")
 
-from .version import __version__
+try:
+    from .version import __version__  # noqa: F401
+except ImportError:
+    pass
 
+from kornia import augmentation
 from kornia import color
 from kornia import contrib
+from kornia import enhance
 from kornia import feature
 from kornia import filters
 from kornia import geometry
+from kornia import jit
 from kornia import losses
 from kornia import utils
-from kornia import augmentation
 
 # Exposes package functional to top level
 
+from kornia.augmentation.functional import *
 from kornia.color import (
     rgb_to_grayscale,
     bgr_to_grayscale,
     bgr_to_rgb,
     rgb_to_bgr,
+    rgb_to_rgba,
+    bgr_to_rgba,
+    rgba_to_rgb,
+    rgba_to_bgr,
     rgb_to_hsv,
     hsv_to_rgb,
     rgb_to_hls,
@@ -30,8 +40,18 @@ from kornia.color import (
     hls_to_rgb,
     rgb_to_ycbcr,
     ycbcr_to_rgb,
+    rgb_to_xyz,
+    xyz_to_rgb,
+    rgb_to_luv,
+    luv_to_rgb,
+)
+from kornia.enhance import (
     normalize,
+    normalize_min_max,
     denormalize,
+    zca_mean,
+    zca_whiten,
+    linear_transform,
     adjust_brightness,
     adjust_contrast,
     adjust_gamma,
@@ -51,6 +71,8 @@ from kornia.feature import (
 )
 from kornia.filters import (
     get_gaussian_kernel1d,
+    get_gaussian_erf_kernel1d,
+    get_gaussian_discrete_kernel1d,
     get_gaussian_kernel2d,
     get_laplacian_kernel1d,
     get_laplacian_kernel2d,
@@ -63,6 +85,7 @@ from kornia.filters import (
     median_blur,
     motion_blur,
     filter2D,
+    filter3D,
 )
 from kornia.losses import (
     ssim,
@@ -82,12 +105,6 @@ from kornia.utils import (
     save_pointcloud_ply,
     load_pointcloud_ply,
 )
-from kornia.augmentation import (
-    random_hflip,
-    random_vflip,
-    color_jitter,
-    random_grayscale,
-)
 
 from kornia.geometry import *
-from kornia.geometry import pi
+from kornia.constants import *

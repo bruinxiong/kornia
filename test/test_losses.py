@@ -2,7 +2,6 @@ import pytest
 
 import kornia
 import kornia.testing as utils  # test utils
-from test.common import device
 
 import math
 import torch
@@ -208,7 +207,7 @@ class TestSSIMLoss:
 
     def test_gradcheck(self, device):
         # input data
-        window_size = 5
+        window_size = 3
         img1 = torch.rand(1, 1, 10, 16).to(device)
         img2 = torch.rand(1, 1, 10, 16).to(device)
 
@@ -257,6 +256,30 @@ class TestDivergenceLoss:
         actual = kornia.losses.kl_div_loss_2d(input.to(device), target.to(device), reduction='none')
         assert_allclose(actual, expected.to(device))
 
+    @pytest.mark.parametrize('input,target,expected', [
+        (torch.full((1, 1, 2, 4), 0.125), torch.full((1, 1, 2, 4), 0.125), 0.0),
+        (torch.full((1, 7, 2, 4), 0.125), torch.full((1, 7, 2, 4), 0.125), 0.0),
+        (torch.full((1, 7, 2, 4), 0.125), torch.zeros((1, 7, 2, 4)), 0.0),
+        (torch.zeros((1, 7, 2, 4)), torch.full((1, 7, 2, 4), 0.125), math.inf),
+    ])
+    def test_noncontiguous_kl(self, device, input, target, expected):
+        input = input.to(device).view(input.shape[::-1]).T
+        target = target.to(device).view(target.shape[::-1]).T
+        actual = kornia.losses.kl_div_loss_2d(input, target).item()
+        assert_allclose(actual, expected)
+
+    @pytest.mark.parametrize('input,target,expected', [
+        (torch.full((1, 1, 2, 4), 0.125), torch.full((1, 1, 2, 4), 0.125), 0.0),
+        (torch.full((1, 7, 2, 4), 0.125), torch.full((1, 7, 2, 4), 0.125), 0.0),
+        (torch.full((1, 7, 2, 4), 0.125), torch.zeros((1, 7, 2, 4)), 0.346574),
+        (torch.zeros((1, 7, 2, 4)), torch.full((1, 7, 2, 4), 0.125), 0.346574),
+    ])
+    def test_noncontiguous_js(self, device, input, target, expected):
+        input = input.to(device).view(input.shape[::-1]).T
+        target = target.to(device).view(target.shape[::-1]).T
+        actual = kornia.losses.js_div_loss_2d(input, target).item()
+        assert_allclose(actual, expected)
+
     def test_gradcheck_kl(self, device):
         input = torch.rand(1, 1, 10, 16).to(device)
         target = torch.rand(1, 1, 10, 16).to(device)
@@ -276,6 +299,22 @@ class TestDivergenceLoss:
         target = utils.tensor_to_gradcheck_var(target)  # to var
         assert gradcheck(kornia.losses.js_div_loss_2d, (input, target),
                          raise_exception=True)
+
+    def test_jit_trace_kl(self, device, dtype):
+        input = torch.randn((2, 4, 10, 16), dtype=dtype, device=device)
+        target = torch.randn((2, 4, 10, 16), dtype=dtype, device=device)
+        args = (input, target)
+        op = kornia.losses.kl_div_loss_2d
+        op_jit = torch.jit.trace(op, args)
+        assert_allclose(op(*args), op_jit(*args), rtol=0, atol=1e-5)
+
+    def test_jit_trace_js(self, device, dtype):
+        input = torch.randn((2, 4, 10, 16), dtype=dtype, device=device)
+        target = torch.randn((2, 4, 10, 16), dtype=dtype, device=device)
+        args = (input, target)
+        op = kornia.losses.js_div_loss_2d
+        op_jit = torch.jit.trace(op, args)
+        assert_allclose(op(*args), op_jit(*args), rtol=0, atol=1e-5)
 
 
 class TestTotalVariation:
